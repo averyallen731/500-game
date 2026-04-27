@@ -1,0 +1,14 @@
+:root {
+  font: 16px/145% system-ui, sans-serif;
+  color: #111827;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  max-width: 100%;
+}

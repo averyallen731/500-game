@@ -1,0 +1,64 @@
+500 Basics
+500 is a partnership trick-taking game where players bid to set trump and the number of tricks the team can capture. The team winning the bid and making their bid earns points based on both the level and suit of the bid. The team not winning the bid earns points at 10 per trick taken. Games are played to ±500 points. The team with the highest score wins.
+
+Trickster 500 offers two popular variations: American and Australian. The primary difference between these two is that the American variation has only one round of bidding. In the Australian version, bidding continues until three of the four players have passed.
+
+Terminology also differs slightly between the two variations. Undealt cards are referred to as the “widow” in the American version, “kitty” in the Australian. Likewise, a bid to take no tricks is called Misère in the Australian variant but Nullo in the American.
+
+The Deck
+500 is commonly played with a 43-card deck: 4–Ace in Hearts and Diamonds (11 cards each), 5–Ace in Spades and Clubs (10 cards each), plus the red Joker. In suits other than trump, ranks are typical with Ace high. In trump, the rank of cards is Joker, Jack of trump, Jack of the other suit the same color of trump (the “off Jack”), Ace, King, Queen, 10, 9, 8, 7, 6, 5, and 4 (if trump is Hearts or Diamonds). With the rule option “Joker low in Nullo (Misère),” the Joker(s) become the lowest ranked cards and are not trump.
+
+Trickster 500 offers a game option to change the deck size to 45 cards (adding the 4s of Spades and Clubs) and 46 cards (adding the black Joker to the 45-card deck).
+
+The 6-player game uses a 63-card deck: a full standard 52-card deck, plus 11s, 12s, red 13s, and the red Joker. The 5-card kitty adds the 2 black 13s. The 6-card kitty adds the black Joker.
+
+The 3-player game uses a 33-card deck (7–Ace plus Joker). Ten cards are dealt per player and there’s a 3-card kitty.
+
+The Deal
+Ten cards are dealt to each player. The remaining cards are left undealt and comprise the “widow” (“kitty” in the Australian variation). These cards are added to the player’s hand who wins the bid. That player must then discard an equal number of cards.
+
+Based on the deck size, the widow (kitty) will be 3, 5, or 6 cards.
+
+Bidding
+Following the deal, starting with the player left of the dealer, each player may place a bid consisting of a number of tricks and a suit, choose to bid “Nullo” or “Open Nullo” (“Misère” and “Open Misère” in the Australian version, or Pass. Bids must be higher than the previous bid, if any.
+
+In the American version, the 6-level bids of the first two players to bid are special bids called “inkles.” Inkle bids cannot win the bidding; they are used to indicate strength in a suit to the bidder’s partner. Bidding begins at the 7-level for the last two players to bid. American version bidding is just one round. If everyone passes, the deal advances and the cards are redealt.
+
+Bid choices for American 500 following an i♠ initial bid. The yellow highlight indicates the suggestion.
+Bid choices for American 500 following an i♠ initial bid. The yellow highlight indicates the suggestion.
+
+In the Australian variation, bidding starts at the 6-level for all players and continues around the table until three players have passed following a non-pass bid. Players who pass may not reenter bidding unless the “Pass after bid” rule option allows it (see 500 Rules).
+
+Example bids for Australian 500. The yellow highlight indicates the suggestion.
+Example bids for Australian 500. The yellow highlight indicates the suggestion.
+
+In both variations, a bid of Nullo (Misère) means the player believes he or she can take zero tricks. The partner of the player who wins the bid with Nullo (Misère) does not play. A bid of Open Nullo (Open Misère) is played with the bidder’s cards face-up and the bidder’s partner does not play. As such, Open Nullo is the “Hail Mary” bid of 500. Open Nullo (Open Misère) can be overbid by 10NT. (Options allow this to be changed; see Open Nullo (Misère) under in 500 Rules.)
+
+In Trickster 500, to place either the Nullo (Misère) or Open Nullo (Open Misère) bid, click or tap the blue Nullo (Misère) button. A popup menu will appear allowing you to choose Nullo (Misère) or Open Nullo (Open Misère).
+
+Play
+The player who wins the bid leads the first trick.
+
+Play continues clockwise following the led suit, if possible, or playing any other card if not. When all four players have played, the trick is taken by the player who played the highest trump, if any, or the player who played the highest card of the led suit.
+
+If the bid is no-trump, the joker wins any suit in which it is played. It, however, can only be played when the player is out of the led suit. If there are two jokers in the game and both are played on the same trick, the monochrome (black) joker beats the color (red) joker.
+
+The player who takes the trick leads the next trick. If the bid is no-trump and the player chooses to lead a joker, he or she is asked to choose the suit which other players must follow. The joker is considered the highest-ranked card of that suit and will win the trick.
+
+Scoring
+If the team that won the bid takes at least the number of tricks indicated in the bid, their score is increased by a value based on their bid (see the following table). If they miss their bid, the same value is subtracted from their score.
+
+Bid	NT	♥	♦	♣	♠
+6	120	100	80	60	40
+7	220	200	180	160	140
+8	320	300	280	260	240
+9	420	400	380	360	340
+10	520	500	480	460	440
+A bid of Nullo (Misère) is worth 250 points; an Open Nullo (Open Misère) is worth 500. The values of Nullo (Misère) can be changed to 210 or 230 and Open Nullo (Open Misère) to 330, 430 or 520 (see Open Nullo (Misère) under in 500 Rules). If a team takes all 10 tricks (a slam) with a bid of 8♠ or lower, they earn 250 points.
+
+The opponents (team that did not take the bid) earn 10 points for each trick taken. When playing with the game option “must bid to win,” these points are awarded only up to when the team’s game score is 490 points.
+
+The game is over when either team exceeds 500 points, or a team goes below −500. The team with the higher score wins unless the game option “bidder goes out” is set. In the case of “bidder goes out,” if both teams go over 500, the bidding team wins.
+
+500 House Rules Options
+If you don’t see your favorite rules listed, use the “More Games/Rules…” button at the bottom of the list of available rules and customize them the way you want. View the available house rule options in 500 Rules.
