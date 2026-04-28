@@ -119,11 +119,30 @@ def play_card(req: PlayRequest):
     """
     Play a card for the given seat.
     card_id: repr string of the card (e.g. "AH", "Joker")
+    After the human (South / seat 2) plays, bots auto-advance so the next
+    state returned is always the human's turn (or game over).
     """
     try:
         msg = _state.play_card(req.seat, req.card_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+    # Auto-advance bots after the human plays
+    if req.seat == _state.HUMAN_SEAT:
+        _state.advance_bots()
+
     resp = _state_response()
     resp["message"] = msg
     return resp
+
+
+@router.post("/bot-advance")
+def bot_advance():
+    """
+    Trigger bot auto-play explicitly — useful when bots need to lead the
+    opening trick (before the human has played anything this hand).
+    """
+    if _state.phase != "PLAYING":
+        raise HTTPException(status_code=400, detail="Not in PLAYING phase")
+    _state.advance_bots()
+    return _state_response()

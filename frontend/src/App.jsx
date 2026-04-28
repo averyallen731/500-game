@@ -86,9 +86,11 @@ function App() {
     }
   }
 
-  function discard(cardIds) {
+  async function discard(cardIds) {
     if (!state) return
-    doFetch('/discard', 'POST', { seat: state.contract.declarer, card_ids: cardIds })
+    await doFetch('/discard', 'POST', { seat: state.contract.declarer, card_ids: cardIds })
+    // After discard, a bot may lead the first trick
+    await doFetch('/bot-advance', 'POST')
   }
 
   function playCard(seat, cardId) {

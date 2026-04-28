@@ -4,7 +4,9 @@ Rule-based card-play heuristic for 500.
 play_card() returns the card the bot plays for a given seat.
 
 Make-tricks policy (normal contracts — all four seats):
-  Leading : pull trump if outstanding; cash known winners; lead top of longest suit.
+  Leading : cash winners from shortest suit first (probe for voids / partner ruffs);
+            lead low from short suits (singleton/doubleton) to promote partner ruffs;
+            pull trump if opponents still hold any; lead top of longest side suit.
   Following: third-hand-high; cover an honour; let partner win cheaply;
              ruff in when void and opponent is winning.
 
@@ -80,33 +82,49 @@ def _play_make_tricks(
 
 
 def _lead_make_tricks(seat, hand, legal, trump, contract, played_cards, rng):
-    """Choose a card to lead in a make-tricks contract."""
+    """
+    Lead strategy (strategy G — best from benchmarking):
+      1. Cash definite winners from SHORTEST non-trump suit first.
+         Leading aces from short suits probes where opponents/partner are void,
+         generating ruffs and gather information about the distribution.
+      2. Short-suit probe: lead lowest from singletons or doubletons.
+         Partner may ruff the second (or only) round; creates cross-ruff opportunities.
+      3. Pull trump if opponents still hold any.
+      4. Top of longest side suit (establish length tricks).
+    """
     trump_in_hand = [c for c in legal if c.effective_suit(trump) == trump]
     non_trump = [c for c in legal if c.effective_suit(trump) != trump]
 
-    # Pull trump: lead highest trump if opponents may still have trump
+    # 1. Cash definite winners from SHORTEST non-trump suit first.
+    winners = [c for c in non_trump if _is_definite_winner(c, trump, hand, played_cards)]
+    if winners:
+        return min(winners, key=lambda c: (
+            len([x for x in hand if x.effective_suit(trump) == c.effective_suit(trump)]),
+            -card_rank_in_context(c, trump, c.effective_suit(trump) or trump),
+        ))
+
+    # 2. Short-suit probe: lead lowest from singletons or doubletons.
+    if non_trump and trump != Suit.NO_TRUMP:
+        groups = _group_by_effective_suit(non_trump, trump)
+        short_groups = {s: cards for s, cards in groups.items() if len(cards) <= 2}
+        if short_groups:
+            shortest_suit = min(short_groups, key=lambda s: len(short_groups[s]))
+            return _lowest_in_context(short_groups[shortest_suit], trump, shortest_suit)
+
+    # 3. Pull trump if opponents still hold any.
     if trump != Suit.NO_TRUMP and trump_in_hand:
         outstanding = _outstanding_trump(trump, trump_in_hand, played_cards)
         if outstanding:
             return _highest_in_context(trump_in_hand, trump, trump)
 
-    # Cash known winners before they get ruffed
-    winners = [c for c in legal if _is_definite_winner(c, trump, hand, played_cards)]
-    if winners:
-        # Cash the winner in the longest suit first (establish the suit)
-        return max(winners, key=lambda c: (
-            len([x for x in hand if x.effective_suit(trump) == c.effective_suit(trump)]),
-            card_rank_in_context(c, trump, c.effective_suit(trump) or trump),
-        ))
-
-    # Lead top of longest side suit to establish length tricks
+    # 4. Top of longest side suit to establish length tricks.
     if non_trump:
         groups = _group_by_effective_suit(non_trump, trump)
         if groups:
             longest_suit = max(groups, key=lambda s: len(groups[s]))
             return _highest_in_context(groups[longest_suit], trump, longest_suit)
 
-    # Only trump left; lead lowest to preserve trump control
+    # Only trump left; lead lowest to preserve trump control.
     if trump_in_hand:
         return _lowest_in_context(trump_in_hand, trump, trump)
 

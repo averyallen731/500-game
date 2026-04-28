@@ -4,6 +4,7 @@ In-memory global GameState for the 500 debug webapp.
 Phases: IDLE → BIDDING → KITTY → PLAYING → FINISHED
 """
 from __future__ import annotations
+import random
 from typing import Optional
 from collections import Counter
 
@@ -143,6 +144,12 @@ class GameState:
         self.declarer_score: Optional[int] = None
         self.opponent_score: Optional[int] = None
 
+        # Played cards as Card objects (needed by ISMCTS / heuristic)
+        self.played_cards: set[Card] = set()
+
+        # Random number generator shared across the session
+        self.rng: random.Random = random.Random()
+
     # ── Deal ─────────────────────────────────────────────────────────────────
 
     def new_deal(self) -> None:
@@ -166,6 +173,8 @@ class GameState:
         self.kitty_card_ids = []
         self.declarer_score = None
         self.opponent_score = None
+        self.played_cards = set()
+        self.rng = random.Random()
         self.phase = "BIDDING"
 
     # ── Bidding ───────────────────────────────────────────────────────────────
@@ -376,6 +385,7 @@ class GameState:
         self.last_trick_winner = winner
         self.trick_just_completed = True
         self.nt_joker_suit = None  # reset for next trick
+        self.played_cards.update(trick_cards)
 
         # Advance
         self.current_leader = winner
@@ -403,6 +413,63 @@ class GameState:
         bid_pts = self.contract.bid.point_value
         self.declarer_score = bid_pts if made else -bid_pts
         self.opponent_score = self.opponent_tricks * 10
+
+    # ── Bot play (ISMCTS) ────────────────────────────────────────────────────
+
+    # Seat 2 (South) is the human; all others are bots
+    HUMAN_SEAT: int = SOUTH
+
+    def advance_bots(self) -> None:
+        """
+        Auto-play all bot seats until it's the human's turn or the game ends.
+        Called after the human plays a card (or at game start if bots lead first).
+        """
+        while self.phase == "PLAYING":
+            seat = self.whose_turn_to_play()
+            if seat is None or seat == self.HUMAN_SEAT:
+                break
+            card = self._bot_choose_card(seat)
+            self.play_card(seat, repr(card))
+
+    def _bot_choose_card(self, seat: int) -> Card:
+        """Choose a card for a bot seat using ISMCTS with heuristic fallback."""
+        from backend.solver.ismcts import run_ismcts
+        from backend.solver.heuristic import play_card as heuristic_play
+
+        trump = self.contract.trump or Suit.NO_TRUMP
+        trick_cards = [c for _, c in self.current_trick]
+        trick_seats  = [s for s, _ in self.current_trick]
+        tricks_done  = len(self.tricks_history)
+
+        try:
+            return run_ismcts(
+                root_seat=seat,
+                root_hand=list(self.hands[seat]),
+                played_cards=set(self.played_cards),
+                trick_so_far=trick_cards,
+                trick_seats_so_far=trick_seats,
+                contract=self.contract,
+                trump=trump,
+                leader=self.current_leader,
+                dec_tricks_so_far=self.declarer_tricks,
+                tricks_done=tricks_done,
+                rng=self.rng,
+                time_budget_s=0.5,
+            )
+        except Exception:
+            # Heuristic fallback — never let a bot crash the game
+            led = self._get_led_suit_for_current_trick()
+            return heuristic_play(
+                seat=seat,
+                hand=self.hands[seat],
+                trick_so_far=trick_cards,
+                leader_seat=self.current_leader,
+                led_suit=led,
+                trump=trump,
+                contract=self.contract,
+                played_cards=self.played_cards,
+                rng=self.rng,
+            )
 
     # ── State serialisation ───────────────────────────────────────────────────
 
