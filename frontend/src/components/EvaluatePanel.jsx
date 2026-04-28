@@ -1,17 +1,11 @@
 /**
- * EvaluatePanel — shows bid analysis for South's hand.
- *
- * Props:
- *   advice       — response from POST /evaluate (or null)
- *   loading      — boolean, true while request is in flight
- *   onEvaluate   — callback() to trigger evaluation
- *   userBid      — the bid the user actually placed (string or null), for comparison
+ * EvaluatePanel — bid analysis with warm styling.
  */
+import { T } from '../theme'
 
 const SUIT_LABEL = { S: '♠', C: '♣', D: '♦', H: '♥', NT: 'NT', NULLO: 'Nullo' }
 const RED_SUITS  = new Set(['H', 'D'])
 
-// Scoring table (mirrors bidding.py)
 const BASE_POINTS = {
   6:  { S: 40,  C: 60,  D: 80,  H: 100, NT: 120 },
   7:  { S: 140, C: 160, D: 180, H: 200, NT: 220 },
@@ -21,72 +15,118 @@ const BASE_POINTS = {
   11: { S: 540, C: 560, D: 580, H: 600, NT: 620 },
 }
 
-/** Fraction of samples where declaring side won >= targetTricks */
 function pctMaking(histogram, targetTricks) {
   const n = histogram.reduce((a, b) => a + b, 0)
   if (!n) return 0
   return histogram.slice(targetTricks).reduce((a, b) => a + b, 0) / n
 }
 
-/** EV for a (level, trump) bid given histogram */
 function bidEV(histogram, level, trump) {
-  const pts = trump === 'NULLO' ? 250 : (BASE_POINTS[level]?.[trump] ?? 0)
-  const p   = trump === 'NULLO' ? pctMaking(histogram, 0) - pctMaking(histogram, 1)
-                                : pctMaking(histogram, level)
-  // For nullo, p(making) = p(0 tricks) = histogram[0]/n
+  const pts  = trump === 'NULLO' ? 250 : (BASE_POINTS[level]?.[trump] ?? 0)
+  const n    = histogram.reduce((a, b) => a + b, 0) || 1
   const pMake = trump === 'NULLO'
-    ? (histogram[0] / (histogram.reduce((a, b) => a + b, 0) || 1))
+    ? histogram[0] / n
     : pctMaking(histogram, level)
   return pts * pMake - pts * (1 - pMake)
 }
 
-/** Best bid for a single trump (highest EV level) */
 function bestBidForTrump(ev, trumpName) {
   if (ev.skipped) return null
   if (trumpName === 'NULLO') {
-    const ev_val = bidEV(ev.histogram, 0, 'NULLO')
-    return { bid: 'NULLO', ev: ev_val, pts: 250 }
+    return { bid: 'NULLO', ev: bidEV(ev.histogram, 0, 'NULLO'), pts: 250 }
   }
   let best = null
   for (let level = 6; level <= 11; level++) {
-    const pts = BASE_POINTS[level][trumpName]
+    const pts   = BASE_POINTS[level][trumpName]
     const ev_val = bidEV(ev.histogram, level, trumpName)
     if (!best || ev_val > best.ev) best = { bid: `${level}${trumpName}`, ev: ev_val, pts }
   }
   return best
 }
 
+const TRUMP_ORDER = ['S', 'C', 'D', 'H', 'NT', 'NULLO']
+
 export default function EvaluatePanel({ advice, loading, onEvaluate, userBid }) {
-  const TRUMP_ORDER = ['S', 'C', 'D', 'H', 'NT', 'NULLO']
+  const th = {
+    padding: '5px 10px',
+    fontFamily: T.font,
+    fontSize: '0.72rem',
+    color: T.textMuted,
+    fontWeight: '400',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
+    borderBottom: `2px solid ${T.panelBorder}`,
+    background: T.panel,
+    textAlign: 'left',
+    whiteSpace: 'nowrap',
+  }
+  const td = {
+    padding: '5px 10px',
+    borderBottom: `1px solid rgba(200,181,154,0.35)`,
+    fontFamily: T.font,
+    fontSize: '0.78rem',
+    verticalAlign: 'middle',
+  }
 
   return (
     <div style={{
-      border: '1px solid #d1d5db', borderRadius: '6px',
-      padding: '10px', background: '#f9fafb', marginTop: '8px',
+      borderRadius: '8px',
+      padding: '12px 14px',
+      background: T.panel,
+      border: `1px solid ${T.panelBorder}`,
+      marginTop: '10px',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-        <span style={{ fontWeight: 'bold', color: '#1d4ed8' }}>Hand Analysis</span>
+      {/* Header row */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        marginBottom: '10px',
+        flexWrap: 'wrap',
+      }}>
+        <span style={{
+          fontFamily: T.font,
+          fontWeight: '600',
+          fontSize: '0.85rem',
+          color: T.text,
+        }}>
+          Hand Analysis
+        </span>
         <button
           onClick={onEvaluate}
           disabled={loading}
           style={{
-            padding: '4px 14px', background: '#2563eb', color: '#fff',
-            border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '0.85rem', opacity: loading ? 0.6 : 1,
+            padding: '5px 14px',
+            fontFamily: T.font,
+            fontSize: '0.78rem',
+            fontWeight: '600',
+            border: `1px solid ${T.accent}`,
+            borderRadius: '5px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            background: loading ? T.panel : T.accentLight,
+            color: T.accent,
+            opacity: loading ? 0.6 : 1,
+            boxShadow: loading ? 'none' : T.cardShadow,
           }}
         >
-          {loading ? 'Analysing…' : advice ? 'Re-analyse' : 'Analyse South\'s Hand'}
+          {loading ? 'Analysing…' : advice ? 'Re-analyse' : "Analyse South's Hand"}
         </button>
         {advice && !loading && (
-          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-            {advice.n_samples} samples each
+          <span style={{ fontSize: '0.72rem', fontFamily: T.font, color: T.textMuted, fontStyle: 'italic' }}>
+            {advice.n_samples} samples
           </span>
         )}
       </div>
 
       {loading && (
-        <div style={{ color: '#6b7280', fontSize: '0.9rem', padding: '8px 0' }}>
-          Simulating ~{(200 * 4).toLocaleString()} deals… this takes ~1–2s
+        <div style={{
+          color: T.textMuted,
+          fontSize: '0.82rem',
+          fontFamily: T.font,
+          fontStyle: 'italic',
+          padding: '6px 0',
+        }}>
+          Simulating ~{(200 * 4).toLocaleString()} deals…
         </div>
       )}
 
@@ -94,124 +134,138 @@ export default function EvaluatePanel({ advice, loading, onEvaluate, userBid }) 
         <>
           {/* Optimal bid banner */}
           <div style={{
-            background: '#dcfce7', border: '1px solid #16a34a',
-            borderRadius: '4px', padding: '6px 10px', marginBottom: '8px',
-            display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap',
+            background: T.winBg,
+            border: `1px solid ${T.winGreen}`,
+            borderRadius: '6px',
+            padding: '8px 12px',
+            marginBottom: '10px',
+            display: 'flex',
+            gap: '16px',
+            alignItems: 'center',
+            flexWrap: 'wrap',
           }}>
-            <span style={{ fontWeight: 'bold', color: '#15803d' }}>
-              Optimal bid: {advice.optimal_bid}
+            <span style={{ fontFamily: T.font, fontWeight: '600', color: T.winGreen, fontSize: '0.9rem' }}>
+              Optimal: {advice.optimal_bid}
             </span>
-            <span style={{ color: '#15803d', fontSize: '0.9rem' }}>
+            <span style={{ fontFamily: T.font, color: T.winGreen, fontSize: '0.82rem' }}>
               EV: {advice.optimal_ev > 0 ? '+' : ''}{advice.optimal_ev.toFixed(0)} pts
             </span>
             {userBid && userBid !== advice.optimal_bid && (
-              <span style={{ color: '#b45309', fontSize: '0.9rem' }}>
+              <span style={{ fontFamily: T.font, color: T.accent, fontSize: '0.82rem', fontStyle: 'italic' }}>
                 You bid: {userBid}
               </span>
             )}
             {userBid && userBid === advice.optimal_bid && (
-              <span style={{ color: '#15803d', fontSize: '0.9rem' }}>✓ You got it!</span>
+              <span style={{ fontFamily: T.font, color: T.winGreen, fontSize: '0.82rem' }}>
+                ✓ Matched
+              </span>
             )}
           </div>
 
           {/* Per-trump table */}
-          <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '0.82rem' }}>
-            <thead>
-              <tr style={{ background: '#f3f4f6' }}>
-                <th style={th}>Trump</th>
-                <th style={th}>Avg Tricks</th>
-                <th style={th}>Best Bid</th>
-                <th style={th}>% Making</th>
-                <th style={th}>EV</th>
-                <th style={th}>Trick distribution (0 → 11)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {TRUMP_ORDER.map(trumpName => {
-                const ev = advice.evaluations[trumpName]
-                if (!ev || ev.skipped) return (
-                  <tr key={trumpName} style={{ opacity: 0.4 }}>
-                    <td style={{ ...td, fontWeight: 'bold', color: RED_SUITS.has(trumpName) ? '#dc2626' : '#111' }}>
-                      {SUIT_LABEL[trumpName]}
-                    </td>
-                    <td style={td} colSpan={5}>skipped (too few cards)</td>
-                  </tr>
-                )
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', width: '100%', background: T.cardBg, borderRadius: '6px', overflow: 'hidden' }}>
+              <thead>
+                <tr>
+                  <th style={th}>Trump</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Avg Tricks</th>
+                  <th style={{ ...th, textAlign: 'center' }}>Best Bid</th>
+                  <th style={{ ...th, textAlign: 'center' }}>% Making</th>
+                  <th style={{ ...th, textAlign: 'center' }}>EV</th>
+                  <th style={th}>Distribution</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TRUMP_ORDER.map(trumpName => {
+                  const ev = advice.evaluations[trumpName]
+                  if (!ev || ev.skipped) return (
+                    <tr key={trumpName} style={{ opacity: 0.35 }}>
+                      <td style={{ ...td, fontWeight: '600', color: RED_SUITS.has(trumpName) ? T.red : T.black }}>
+                        {SUIT_LABEL[trumpName]}
+                      </td>
+                      <td style={td} colSpan={5}>
+                        <span style={{ fontStyle: 'italic', color: T.textMuted }}>skipped — too few cards</span>
+                      </td>
+                    </tr>
+                  )
 
-                const best = bestBidForTrump(ev, trumpName)
-                const isOptimal = best && best.bid === advice.optimal_bid
-                const pct = best ? (trumpName === 'NULLO'
-                  ? ev.histogram[0] / advice.n_samples
-                  : pctMaking(ev.histogram, parseInt(best.bid))) : 0
+                  const best      = bestBidForTrump(ev, trumpName)
+                  const isOptimal = best && best.bid === advice.optimal_bid
+                  const pct       = best
+                    ? (trumpName === 'NULLO'
+                        ? ev.histogram[0] / advice.n_samples
+                        : pctMaking(ev.histogram, parseInt(best.bid)))
+                    : 0
 
-                return (
-                  <tr
-                    key={trumpName}
-                    style={{ background: isOptimal ? '#f0fdf4' : 'transparent' }}
-                  >
-                    <td style={{
-                      ...td, fontWeight: 'bold',
-                      color: RED_SUITS.has(trumpName) ? '#dc2626' : '#111',
-                    }}>
-                      {SUIT_LABEL[trumpName]}
-                      {isOptimal && ' ★'}
-                    </td>
-                    <td style={{ ...td, textAlign: 'center' }}>
-                      {trumpName === 'NULLO'
-                        ? `${ev.avg_tricks.toFixed(2)} taken`
-                        : ev.avg_tricks.toFixed(2)}
-                    </td>
-                    <td style={{ ...td, textAlign: 'center', fontWeight: isOptimal ? 'bold' : 'normal' }}>
-                      {best ? best.bid : '—'}
-                    </td>
-                    <td style={{ ...td, textAlign: 'center' }}>
-                      {best ? `${(pct * 100).toFixed(0)}%` : '—'}
-                    </td>
-                    <td style={{
-                      ...td, textAlign: 'center',
-                      color: best && best.ev >= 0 ? '#15803d' : '#dc2626',
-                    }}>
-                      {best ? `${best.ev >= 0 ? '+' : ''}${best.ev.toFixed(0)}` : '—'}
-                    </td>
-                    <td style={{ ...td, minWidth: '160px' }}>
-                      <MiniHistogram histogram={ev.histogram} n={advice.n_samples} />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr
+                      key={trumpName}
+                      style={{ background: isOptimal ? T.winBg : 'transparent' }}
+                    >
+                      <td style={{
+                        ...td, fontWeight: '600',
+                        color: RED_SUITS.has(trumpName) ? T.red : T.black,
+                        fontSize: '0.9rem',
+                      }}>
+                        {SUIT_LABEL[trumpName]}{isOptimal && ' ★'}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {trumpName === 'NULLO'
+                          ? `${ev.avg_tricks.toFixed(2)} taken`
+                          : ev.avg_tricks.toFixed(2)}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center', fontWeight: isOptimal ? '600' : '400' }}>
+                        {best ? best.bid : '—'}
+                      </td>
+                      <td style={{ ...td, textAlign: 'center' }}>
+                        {best ? `${(pct * 100).toFixed(0)}%` : '—'}
+                      </td>
+                      <td style={{
+                        ...td, textAlign: 'center', fontWeight: '600',
+                        color: best && best.ev >= 0 ? T.winGreen : T.loseBrown,
+                      }}>
+                        {best ? `${best.ev >= 0 ? '+' : ''}${best.ev.toFixed(0)}` : '—'}
+                      </td>
+                      <td style={{ ...td, minWidth: '150px' }}>
+                        <MiniHistogram histogram={ev.histogram} n={advice.n_samples} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Per-level breakdown for the optimal suit */}
+          {/* Per-level breakdown for optimal trump */}
           {advice.optimal_bid !== 'NULLO' && (() => {
-            const trumpName = advice.optimal_bid.slice(-2).startsWith('N')
-              ? 'NT' : advice.optimal_bid.slice(-1)
+            const trumpName = advice.optimal_bid.slice(-2).startsWith('N') ? 'NT' : advice.optimal_bid.slice(-1)
             const ev = advice.evaluations[trumpName]
             if (!ev || ev.skipped) return null
             return (
-              <div style={{ marginTop: '10px' }}>
-                <div style={{ fontSize: '0.8rem', color: '#374151', fontWeight: 'bold', marginBottom: '4px' }}>
-                  All levels for {SUIT_LABEL[trumpName]}:
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontFamily: T.font, fontSize: '0.75rem', color: T.textMuted, marginBottom: '6px', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  All levels — {SUIT_LABEL[trumpName]}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {[6, 7, 8, 9, 10, 11].map(level => {
-                    const pts  = BASE_POINTS[level][trumpName]
-                    const p    = pctMaking(ev.histogram, level)
-                    const ev_v = bidEV(ev.histogram, level, trumpName)
+                    const pts   = BASE_POINTS[level][trumpName]
+                    const p     = pctMaking(ev.histogram, level)
+                    const ev_v  = bidEV(ev.histogram, level, trumpName)
                     const isOpt = `${level}${trumpName}` === advice.optimal_bid
                     return (
-                      <div
-                        key={level}
-                        style={{
-                          padding: '4px 8px', borderRadius: '4px', fontSize: '0.78rem',
-                          background: isOpt ? '#dcfce7' : '#f3f4f6',
-                          border: `1px solid ${isOpt ? '#16a34a' : '#e5e7eb'}`,
-                          fontWeight: isOpt ? 'bold' : 'normal',
-                        }}
-                      >
-                        <div>{level}{SUIT_LABEL[trumpName]} ({pts})</div>
-                        <div style={{ color: '#6b7280' }}>{(p * 100).toFixed(0)}% making</div>
-                        <div style={{ color: ev_v >= 0 ? '#15803d' : '#dc2626' }}>
+                      <div key={level} style={{
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        fontFamily: T.font,
+                        fontSize: '0.75rem',
+                        background: isOpt ? T.winBg : T.cardBg,
+                        border: `1px solid ${isOpt ? T.winGreen : T.cardBorder}`,
+                        fontWeight: isOpt ? '600' : '400',
+                        boxShadow: isOpt ? 'none' : T.cardShadow,
+                      }}>
+                        <div style={{ color: T.text }}>{level}{SUIT_LABEL[trumpName]} <span style={{ color: T.textMuted, fontWeight: '400' }}>({pts})</span></div>
+                        <div style={{ color: T.textMuted, marginTop: '2px' }}>{(p * 100).toFixed(0)}% make</div>
+                        <div style={{ color: ev_v >= 0 ? T.winGreen : T.loseBrown, fontWeight: '600' }}>
                           EV {ev_v >= 0 ? '+' : ''}{ev_v.toFixed(0)}
                         </div>
                       </div>
@@ -227,32 +281,24 @@ export default function EvaluatePanel({ advice, loading, onEvaluate, userBid }) 
   )
 }
 
-/** Tiny bar chart showing trick distribution */
 function MiniHistogram({ histogram, n }) {
   const max = Math.max(...histogram, 1)
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1px', height: '24px' }}>
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1px', height: '22px' }}>
       {histogram.map((count, k) => (
         <div
           key={k}
           title={`${k} tricks: ${count}/${n} (${((count/n)*100).toFixed(0)}%)`}
           style={{
             width: '10px',
-            height: `${Math.round((count / max) * 24)}px`,
-            background: count === max ? '#2563eb' : '#93c5fd',
-            borderRadius: '1px',
+            height: `${Math.max(2, Math.round((count / max) * 22))}px`,
+            background: count === max ? T.accentMid : T.panelBorder,
+            borderRadius: '1px 1px 0 0',
             flexShrink: 0,
+            transition: 'height 0.2s',
           }}
         />
       ))}
     </div>
   )
-}
-
-const th = {
-  border: '1px solid #d1d5db', padding: '4px 8px',
-  background: '#f3f4f6', textAlign: 'left', whiteSpace: 'nowrap',
-}
-const td = {
-  border: '1px solid #e5e7eb', padding: '4px 8px', verticalAlign: 'middle',
 }

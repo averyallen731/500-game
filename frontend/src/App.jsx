@@ -1,12 +1,6 @@
 /**
- * App.jsx — 500 Debug Webapp
- *
- * Layout:
- *   [Deal button]  Phase indicator  Message
- *   North hand
- *   West hand | TrickPanel | East hand
- *   South hand
- *   BiddingPanel | KittyPanel | GameLog
+ * App.jsx — Five Hundred
+ * Analog / Kitchen Table aesthetic
  */
 import { useState, useCallback } from 'react'
 import Hand from './components/Hand'
@@ -15,9 +9,9 @@ import KittyPanel from './components/KittyPanel'
 import TrickPanel from './components/TrickPanel'
 import GameLog from './components/GameLog'
 import EvaluatePanel from './components/EvaluatePanel'
+import { T } from './theme'
 
 const SEAT_NAMES = ['North', 'East', 'South', 'West']
-
 const API = '/api'
 
 async function apiFetch(path, method = 'GET', body = null) {
@@ -34,18 +28,17 @@ async function apiFetch(path, method = 'GET', body = null) {
   return res.json()
 }
 
-// Simple suit symbol helper used in kitty display
 function suitSym(suit) {
   return { H: '♥', D: '♦', S: '♠', C: '♣', NT: 'NT' }[suit] ?? suit
 }
 
-function App() {
-  const [state, setState] = useState(null)
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [advice, setAdvice] = useState(null)
+export default function App() {
+  const [state, setState]               = useState(null)
+  const [error, setError]               = useState(null)
+  const [loading, setLoading]           = useState(false)
+  const [advice, setAdvice]             = useState(null)
   const [adviceLoading, setAdviceLoading] = useState(false)
-  const [userBid, setUserBid] = useState(null)   // South's bid for comparison
+  const [userBid, setUserBid]           = useState(null)
 
   const doFetch = useCallback(async (path, method = 'GET', body = null) => {
     setLoading(true)
@@ -60,16 +53,11 @@ function App() {
     }
   }, [])
 
-  function deal() {
-    setAdvice(null)
-    setUserBid(null)
-    doFetch('/deal', 'POST')
-  }
+  function deal() { setAdvice(null); setUserBid(null); doFetch('/deal', 'POST') }
   function refreshState() { doFetch('/state') }
 
   function bid(bidStr) {
     if (!state) return
-    // Record South's bid for later comparison with advice
     if (state.current_bidder === 2 && bidStr !== 'PASS') setUserBid(bidStr)
     doFetch('/bid', 'POST', { seat: state.current_bidder, bid: bidStr })
   }
@@ -89,7 +77,6 @@ function App() {
   async function discard(cardIds) {
     if (!state) return
     await doFetch('/discard', 'POST', { seat: state.contract.declarer, card_ids: cardIds })
-    // After discard, a bot may lead the first trick
     await doFetch('/bot-advance', 'POST')
   }
 
@@ -97,20 +84,17 @@ function App() {
     doFetch('/play', 'POST', { seat, card_id: cardId })
   }
 
-  // Compute per-seat trick counts (from history)
   function trickCountForSeat(seat) {
     if (!state) return 0
     return state.tricks_history.filter(t => t.winner === seat).length
   }
 
-  // Legal card IDs as a Set
-  const legalSet = new Set((state?.legal_plays ?? []).map(c => c.id))
-  const whoseTurn = state?.whose_turn
-  const phase = state?.phase ?? 'IDLE'
+  const legalSet   = new Set((state?.legal_plays ?? []).map(c => c.id))
+  const whoseTurn  = state?.whose_turn
+  const phase      = state?.phase ?? 'IDLE'
+  const trump      = state?.contract?.trump ?? null
 
-  function handForSeat(seat) {
-    return state?.hands?.[seat] ?? []
-  }
+  function handForSeat(seat) { return state?.hands?.[seat] ?? [] }
 
   function isSelectableForPlaying(seat) {
     return phase === 'PLAYING' && whoseTurn === seat && legalSet.size > 0
@@ -118,129 +102,223 @@ function App() {
 
   function onCardClickForSeat(seat) {
     return (card) => {
-      if (isSelectableForPlaying(seat)) {
-        playCard(seat, card.id)
-      }
+      if (isSelectableForPlaying(seat)) playCard(seat, card.id)
     }
   }
 
-  // Score summary for finished game
-  function finishedSummary() {
+  function finishedBanner() {
     if (phase !== 'FINISHED' || !state.contract) return null
-    const c = state.contract
-    const decName = SEAT_NAMES[c.declarer]
+    const c    = state.contract
     const made = c.tricks_needed === 0
       ? state.declarer_tricks === 0
       : state.declarer_tricks >= c.tricks_needed
-    const decScore = state.declarer_score
-    const oppScore = state.opponent_score
+    const decName = SEAT_NAMES[c.declarer]
+
     return (
       <div style={{
-        padding: '12px', background: made ? '#dcfce7' : '#fee2e2',
-        border: `2px solid ${made ? '#16a34a' : '#dc2626'}`,
-        borderRadius: '6px', textAlign: 'center',
-        marginBottom: '8px',
+        padding: '12px 16px',
+        background: made ? T.winBg : T.loseBg,
+        border: `2px solid ${made ? T.winGreen : T.loseBrown}`,
+        borderRadius: '8px',
+        fontFamily: T.font,
+        marginBottom: '10px',
       }}>
-        <div style={{ fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '4px' }}>
+        <div style={{
+          fontWeight: '600',
+          fontSize: '1rem',
+          color: made ? T.winGreen : T.loseBrown,
+          marginBottom: '4px',
+        }}>
           {made
-            ? `✅ ${decName} MADE ${c.bid}! (${state.declarer_tricks}/${c.tricks_needed} tricks)`
-            : `❌ ${decName} WENT DOWN on ${c.bid}. Got ${state.declarer_tricks}, needed ${c.tricks_needed}.`}
+            ? `${decName} made ${c.bid} — ${state.declarer_tricks} of ${c.tricks_needed} tricks`
+            : `${decName} went down on ${c.bid} — got ${state.declarer_tricks}, needed ${c.tricks_needed}`}
         </div>
-        {decScore !== null && oppScore !== null && (
-          <div style={{ fontSize: '0.9rem', color: '#374151' }}>
-            <strong>Declarer side:</strong>{' '}
-            <span style={{ color: decScore >= 0 ? '#16a34a' : '#dc2626' }}>
-              {decScore >= 0 ? '+' : ''}{decScore} pts
+        {state.declarer_score !== null && state.opponent_score !== null && (
+          <div style={{ fontSize: '0.82rem', color: T.text }}>
+            <span style={{ marginRight: '16px' }}>
+              Declaring side:{' '}
+              <strong style={{ color: state.declarer_score >= 0 ? T.winGreen : T.loseBrown }}>
+                {state.declarer_score >= 0 ? '+' : ''}{state.declarer_score} pts
+              </strong>
             </span>
-            {'  |  '}
-            <strong>Opponents:</strong>{' '}
-            <span style={{ color: '#2563eb' }}>+{oppScore} pts</span>
-            {oppScore > 0 && (
-              <span style={{ color: '#6b7280', fontSize: '0.8rem' }}> ({state.opponent_tricks} tricks × 10)</span>
-            )}
+            <span>
+              Opponents:{' '}
+              <strong style={{ color: T.accent }}>+{state.opponent_score} pts</strong>
+              {state.opponent_score > 0 && (
+                <span style={{ color: T.textMuted, fontSize: '0.75rem', marginLeft: '4px' }}>
+                  ({state.opponent_tricks} tricks × 10)
+                </span>
+              )}
+            </span>
           </div>
         )}
       </div>
     )
   }
 
-  // The trump suit from the current contract (letter like "H", "S", or null)
-  const trump = state?.contract?.trump ?? null
-
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', maxWidth: '960px', margin: '0 auto', padding: '12px' }}>
-      {/* Header bar */}
+    <div style={{
+      fontFamily: T.font,
+      maxWidth: '980px',
+      margin: '0 auto',
+      padding: '14px 16px',
+      minHeight: '100vh',
+      background: T.bg,
+      color: T.text,
+    }}>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '16px',
-        marginBottom: '12px', borderBottom: '1px solid #e5e7eb', paddingBottom: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        marginBottom: '14px',
+        paddingBottom: '10px',
+        borderBottom: `1px solid ${T.panelBorder}`,
         flexWrap: 'wrap',
       }}>
+        {/* Title */}
+        <span style={{
+          fontFamily: T.font,
+          fontStyle: 'italic',
+          fontWeight: '400',
+          fontSize: '1.25rem',
+          color: T.text,
+          letterSpacing: '0.01em',
+          marginRight: '4px',
+        }}>
+          Five Hundred
+        </span>
+
+        {/* Deal button */}
         <button
           onClick={deal}
           disabled={loading}
           style={{
-            padding: '6px 16px', background: '#2563eb', color: '#fff',
-            border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold',
+            padding: '6px 18px',
+            fontFamily: T.font,
+            fontSize: '0.82rem',
+            fontWeight: '600',
+            background: T.accent,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '5px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            opacity: loading ? 0.7 : 1,
+            boxShadow: '0 2px 6px rgba(146,64,14,0.3)',
+            letterSpacing: '0.02em',
           }}
         >
-          Deal New Hand
+          Deal
         </button>
-        <span style={{ fontWeight: 'bold', color: '#374151' }}>
-          Phase: <span style={{ color: '#1d4ed8' }}>{phase}</span>
+
+        {/* Phase pill */}
+        <span style={{
+          padding: '3px 10px',
+          borderRadius: '20px',
+          fontSize: '0.72rem',
+          fontFamily: T.font,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          background: T.panel,
+          color: T.textMuted,
+          border: `1px solid ${T.panelBorder}`,
+        }}>
+          {phase}
         </span>
+
         {state?.highest_bid && (
-          <span style={{ color: '#374151' }}>
-            Current bid: <strong>{state.highest_bid}</strong>
-            {state.highest_bidder !== null && ` by ${SEAT_NAMES[state.highest_bidder]}`}
+          <span style={{ fontFamily: T.font, fontSize: '0.82rem', color: T.text }}>
+            <span style={{ color: T.textMuted }}>Bid: </span>
+            <strong>{state.highest_bid}</strong>
+            {state.highest_bidder !== null && (
+              <span style={{ color: T.textMuted }}> · {SEAT_NAMES[state.highest_bidder]}</span>
+            )}
           </span>
         )}
-        {loading && <span style={{ color: '#9ca3af' }}>loading…</span>}
+
+        {loading && (
+          <span style={{ color: T.textMuted, fontSize: '0.78rem', fontStyle: 'italic' }}>…</span>
+        )}
+
         <button
           onClick={refreshState}
           disabled={loading}
-          style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: '0.8rem', cursor: 'pointer' }}
+          style={{
+            marginLeft: 'auto',
+            padding: '4px 10px',
+            fontFamily: T.font,
+            fontSize: '0.72rem',
+            cursor: 'pointer',
+            background: 'transparent',
+            border: `1px solid ${T.panelBorder}`,
+            borderRadius: '4px',
+            color: T.textMuted,
+          }}
         >
           Refresh
         </button>
       </div>
 
-      {/* Error */}
+      {/* ── Error ──────────────────────────────────────────────────────────── */}
       {error && (
         <div style={{
-          background: '#fee2e2', border: '1px solid #fca5a5',
-          padding: '8px', borderRadius: '4px', marginBottom: '8px', color: '#991b1b',
+          background: T.loseBg,
+          border: `1px solid ${T.loseBrown}`,
+          padding: '8px 12px',
+          borderRadius: '6px',
+          marginBottom: '10px',
+          fontFamily: T.font,
+          fontSize: '0.82rem',
+          color: T.loseBrown,
         }}>
-          Error: {error}
+          {error}
         </div>
       )}
 
-      {/* Status message */}
+      {/* ── Status message ─────────────────────────────────────────────────── */}
       {state?.message && (
         <div style={{
-          background: '#f3f4f6', padding: '6px 10px', borderRadius: '4px',
-          marginBottom: '8px', fontSize: '0.9rem', color: '#374151',
+          background: T.panel,
+          padding: '6px 12px',
+          borderRadius: '5px',
+          marginBottom: '10px',
+          fontFamily: T.font,
+          fontSize: '0.82rem',
+          color: T.textMuted,
+          fontStyle: 'italic',
+          border: `1px solid ${T.panelBorder}`,
         }}>
           {state.message}
         </div>
       )}
 
-      {/* Finished summary */}
-      {phase === 'FINISHED' && finishedSummary()}
+      {/* ── Finished banner ────────────────────────────────────────────────── */}
+      {phase === 'FINISHED' && finishedBanner()}
 
-      {/* Empty state */}
+      {/* ── Empty state ────────────────────────────────────────────────────── */}
       {!state && (
-        <div style={{ textAlign: 'center', color: '#9ca3af', marginTop: '40px', fontSize: '1.1rem' }}>
-          Click "Deal New Hand" to start.
+        <div style={{
+          textAlign: 'center',
+          color: T.textFaint,
+          marginTop: '60px',
+          fontSize: '1rem',
+          fontFamily: T.font,
+          fontStyle: 'italic',
+        }}>
+          Press Deal to start a hand.
         </div>
       )}
 
+      {/* ── Game layout ────────────────────────────────────────────────────── */}
       {state && (
         <>
-          {/* North hand */}
-          <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+          {/* North */}
+          <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             <Hand
               cards={handForSeat(0)}
-              label="North (0)"
+              label={`North${state.contract?.declarer === 0 ? ' — Declarer' : ''}`}
               trump={trump}
               selectable={isSelectableForPlaying(0)}
               onCardClick={onCardClickForSeat(0)}
@@ -250,14 +328,17 @@ function App() {
             />
           </div>
 
-          {/* Middle row: West | TrickPanel | East */}
+          {/* Middle row: West | Table | East */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 280px 1fr',
-            gap: '8px', alignItems: 'start', marginBottom: '4px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 296px 1fr',
+            gap: '10px',
+            alignItems: 'start',
+            marginBottom: '6px',
           }}>
             <Hand
               cards={handForSeat(3)}
-              label="West (3)"
+              label={`West${state.contract?.declarer === 3 ? ' — Declarer' : ''}`}
               trump={trump}
               selectable={isSelectableForPlaying(3)}
               onCardClick={onCardClickForSeat(3)}
@@ -276,7 +357,7 @@ function App() {
             <div style={{ textAlign: 'right' }}>
               <Hand
                 cards={handForSeat(1)}
-                label="East (1)"
+                label={`East${state.contract?.declarer === 1 ? ' — Declarer' : ''}`}
                 trump={trump}
                 selectable={isSelectableForPlaying(1)}
                 onCardClick={onCardClickForSeat(1)}
@@ -287,11 +368,11 @@ function App() {
             </div>
           </div>
 
-          {/* South hand */}
-          <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+          {/* South */}
+          <div style={{ textAlign: 'center', marginBottom: '6px' }}>
             <Hand
               cards={handForSeat(2)}
-              label={`South (2)${state.contract?.declarer === 2 ? ' — Declarer' : ''}`}
+              label={`South${state.contract?.declarer === 2 ? ' — Declarer' : ''}`}
               trump={trump}
               selectable={isSelectableForPlaying(2)}
               onCardClick={onCardClickForSeat(2)}
@@ -301,22 +382,29 @@ function App() {
             />
           </div>
 
-          {/* Kitty strip */}
+          {/* Kitty strip (bidding phase) */}
           {phase === 'BIDDING' && (
-            <div style={{ marginBottom: '8px', fontSize: '0.85rem', color: '#6b7280' }}>
-              <strong>Kitty:</strong>{' '}
+            <div style={{
+              marginBottom: '10px',
+              fontSize: '0.78rem',
+              fontFamily: T.font,
+              color: T.textMuted,
+              fontStyle: 'italic',
+            }}>
+              Kitty:{' '}
               {(state.kitty ?? []).length === 0
                 ? '[3 face-down cards]'
                 : (state.kitty ?? []).map((c, i) => (
-                    <span key={i} style={{ marginRight: '4px' }}>
+                    <span key={i} style={{ marginRight: '6px', color: T.text }}>
                       {c.id === 'Joker' ? '🃏' : `${c.rank}${suitSym(c.suit)}`}
                     </span>
-                  ))}
+                  ))
+              }
             </div>
           )}
 
-          {/* Bottom panels */}
-          <div style={{ marginTop: '8px' }}>
+          {/* ── Bottom panels ───────────────────────────────────────────────── */}
+          <div style={{ marginTop: '10px' }}>
             {phase === 'BIDDING' && (
               <BiddingPanel
                 currentBidder={state.current_bidder}
@@ -336,7 +424,6 @@ function App() {
               />
             )}
 
-            {/* Hand analysis — available whenever a hand is dealt */}
             {['BIDDING', 'KITTY', 'PLAYING', 'FINISHED'].includes(phase) && (
               <EvaluatePanel
                 advice={advice}
@@ -347,7 +434,7 @@ function App() {
             )}
           </div>
 
-          {/* Game log */}
+          {/* ── Game log ─────────────────────────────────────────────────────── */}
           {(phase === 'PLAYING' || phase === 'FINISHED') && (
             <GameLog tricksHistory={state.tricks_history} />
           )}
@@ -356,5 +443,3 @@ function App() {
     </div>
   )
 }
-
-export default App

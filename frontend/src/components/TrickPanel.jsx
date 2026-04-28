@@ -1,20 +1,17 @@
 /**
- * TrickPanel — shows the 4 card slots (N/E/S/W) for the current trick
- * plus a running score line.
- *
- * Props:
- *   currentTrick     — array of {seat, card} objects
- *   declarerTricks   — int
- *   opponentTricks   — int
- *   contract         — contract info object or null
- *   lastTrickWinner  — seat number of last trick winner (or null)
- *   trickJustCompleted — bool
+ * TrickPanel — the centre table.  Shows current-trick cards in N/E/S/W
+ * positions on a warm felt surface.
  */
 import CardDisplay from './CardDisplay'
+import { T } from '../theme'
 
 const SEAT_NAMES = { 0: 'North', 1: 'East', 2: 'South', 3: 'West' }
 
-function TrickPanel({
+function suitLabel(s) {
+  return { S: '♠', C: '♣', H: '♥', D: '♦', NT: 'NT' }[s] ?? s
+}
+
+export default function TrickPanel({
   currentTrick = [],
   declarerTricks = 0,
   opponentTricks = 0,
@@ -22,105 +19,154 @@ function TrickPanel({
   lastTrickWinner = null,
   trickJustCompleted = false,
 }) {
-  // Build a map: seat → card
   const played = {}
-  for (const { seat, card } of currentTrick) {
-    played[seat] = card
-  }
+  for (const { seat, card } of currentTrick) played[seat] = card
 
   const activeSeatSet = new Set(contract?.active_seats ?? [0, 1, 2, 3])
+  const needed  = contract?.tricks_needed ?? '?'
+  const trumpSym = contract?.trump ? suitLabel(contract.trump) : '—'
 
-  function SlotCard({ seat, position }) {
-    const card = played[seat]
-    const isWinner = trickJustCompleted && lastTrickWinner === seat
+  // Declaring side label
+  let decLabel = 'Declaring'
+  if (contract) {
+    const d = SEAT_NAMES[contract.declarer]?.[0] ?? '?'
+    const p = SEAT_NAMES[contract.partner]?.[0] ?? '?'
+    decLabel = `${d}+${p}`
+  }
+
+  function Slot({ seat }) {
+    const card    = played[seat]
+    const winner  = trickJustCompleted && lastTrickWinner === seat
     const inactive = !activeSeatSet.has(seat)
 
     return (
-      <div style={{ textAlign: 'center', width: '80px' }}>
-        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '2px' }}>
-          {SEAT_NAMES[seat]}
-          {inactive && ' (out)'}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '3px',
+        width: '62px',
+      }}>
+        <div style={{
+          fontSize: '0.65rem',
+          fontFamily: T.font,
+          color: winner ? T.winGreen : T.textMuted,
+          fontWeight: winner ? '600' : '400',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+        }}>
+          {SEAT_NAMES[seat]}{inactive ? ' ·' : ''}
         </div>
-        <div
-          style={{
-            minHeight: '36px',
-            border: isWinner ? '2px solid #16a34a' : '1px dashed #d1d5db',
-            borderRadius: '4px',
-            padding: '2px',
-            background: isWinner ? '#dcfce7' : inactive ? '#f3f4f6' : '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {card ? (
-            <CardDisplay card={card} />
-          ) : (
-            <span style={{ color: '#d1d5db', fontSize: '0.8rem' }}>—</span>
-          )}
+        <div style={{
+          width: '52px', height: '72px',
+          border: winner
+            ? `2px solid ${T.winGreen}`
+            : `1.5px dashed ${T.panelBorder}`,
+          borderRadius: '6px',
+          background: winner ? T.winBg : inactive ? 'rgba(0,0,0,0.03)' : 'rgba(255,253,248,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: winner ? `0 0 0 3px rgba(75,105,67,0.15)` : 'none',
+          transition: 'all 0.2s',
+        }}>
+          {card
+            ? <CardDisplay card={card} size="lg" />
+            : <span style={{ color: T.textFaint, fontSize: '1.1rem' }}>·</span>
+          }
         </div>
       </div>
     )
   }
 
-  // Score line
-  let declarerLabel = 'Declaring side'
-  let opponentLabel = 'Opponents'
-  if (contract) {
-    const decName = SEAT_NAMES[contract.declarer] ?? 'Declarer'
-    const partName = SEAT_NAMES[contract.partner] ?? 'Partner'
-    declarerLabel = `${decName}+${partName}`
-  }
-
-  const needed = contract?.tricks_needed ?? '?'
-  const trump = contract?.trump ?? '—'
-
   return (
-    <div style={{ border: '1px solid #d1d5db', borderRadius: '6px', padding: '10px', background: '#f0fdf4' }}>
-      <div style={{ fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '8px', color: '#166534' }}>
-        Current Trick
-        {contract && (
-          <span style={{ fontWeight: 'normal', color: '#6b7280', marginLeft: '8px' }}>
-            Contract: {contract.bid} | Trump: {trump} | Need: {needed} | Worth: {contract.point_value ?? '?'} pts
-          </span>
-        )}
-      </div>
-
-      {/* 3×3 grid: N on top, S on bottom, W left, E right, trick cards in center */}
-      <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 80px', gridTemplateRows: 'auto auto auto', gap: '4px', marginBottom: '10px', justifyContent: 'center' }}>
-        {/* Row 1: North */}
-        <div />
-        <SlotCard seat={0} />
-        <div />
-        {/* Row 2: West, center label, East */}
-        <SlotCard seat={3} />
-        <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#9ca3af', alignSelf: 'center' }}>
-          {currentTrick.length} / {activeSeatSet.size}
+    <div style={{
+      borderRadius: '10px',
+      padding: '12px 10px 10px',
+      background: T.felt,
+      border: `1.5px solid ${T.feltDark}`,
+      boxShadow: `inset 0 1px 4px rgba(60,40,20,0.12), 0 2px 6px rgba(60,40,20,0.10)`,
+    }}>
+      {/* Contract line */}
+      {contract && (
+        <div style={{
+          textAlign: 'center',
+          fontFamily: T.font,
+          fontSize: '0.72rem',
+          color: T.text,
+          marginBottom: '10px',
+          letterSpacing: '0.02em',
+        }}>
+          <strong style={{ fontSize: '0.78rem' }}>{contract.bid}</strong>
+          <span style={{ color: T.textMuted, margin: '0 5px' }}>·</span>
+          <span>{trumpSym}</span>
+          <span style={{ color: T.textMuted, margin: '0 5px' }}>·</span>
+          <span>need {needed}</span>
+          <span style={{ color: T.textMuted, margin: '0 5px' }}>·</span>
+          <span style={{ color: T.accent }}>{contract.point_value ?? '?'} pts</span>
         </div>
-        <SlotCard seat={1} />
-        {/* Row 3: South */}
-        <div />
-        <SlotCard seat={2} />
-        <div />
+      )}
+
+      {/* 3×3 compass grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '62px 62px 62px',
+        gridTemplateRows: 'auto auto auto',
+        gap: '6px',
+        justifyContent: 'center',
+        marginBottom: '10px',
+      }}>
+        <div /><Slot seat={0} /><div />
+        <Slot seat={3} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '0.65rem',
+          fontFamily: T.font,
+          color: T.textMuted,
+          letterSpacing: '0.04em',
+        }}>
+          {currentTrick.length}/{activeSeatSet.size}
+        </div>
+        <Slot seat={1} />
+        <div /><Slot seat={2} /><div />
       </div>
 
-      {/* Score */}
-      <div style={{ fontSize: '0.85rem', color: '#374151', display: 'flex', gap: '16px' }}>
+      {/* Score row */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        gap: '18px',
+        fontFamily: T.font,
+        fontSize: '0.75rem',
+        color: T.text,
+        borderTop: `1px solid ${T.feltDark}`,
+        paddingTop: '8px',
+      }}>
         <span>
-          <strong>{declarerLabel}:</strong> {declarerTricks}
+          <span style={{ color: T.textMuted }}>{decLabel} </span>
+          <strong style={{ fontSize: '0.9rem' }}>{declarerTricks}</strong>
         </span>
+        <span style={{ color: T.textMuted }}>vs</span>
         <span>
-          <strong>{opponentLabel}:</strong> {opponentTricks}
+          <span style={{ color: T.textMuted }}>Opp </span>
+          <strong style={{ fontSize: '0.9rem' }}>{opponentTricks}</strong>
         </span>
       </div>
 
       {trickJustCompleted && lastTrickWinner !== null && (
-        <div style={{ marginTop: '4px', color: '#16a34a', fontWeight: 'bold', fontSize: '0.85rem' }}>
-          {SEAT_NAMES[lastTrickWinner]} won that trick!
+        <div style={{
+          marginTop: '6px',
+          textAlign: 'center',
+          fontFamily: T.font,
+          fontSize: '0.75rem',
+          color: T.winGreen,
+          fontStyle: 'italic',
+        }}>
+          {SEAT_NAMES[lastTrickWinner]} takes the trick
         </div>
       )}
     </div>
   )
 }
-
-export default TrickPanel

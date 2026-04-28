@@ -1,14 +1,36 @@
 :root {
-  font: 16px/145% system-ui, sans-serif;
-  color: #111827;
-  background: #fff;
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #3D2B1F;
+  background: #F2EDE4;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   margin: 0;
+  background: #F2EDE4;
 }
 
 #root {
   max-width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Smooth card hover lift */
+.card-lift {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.card-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 18px rgba(60,40,20,0.22), 0 2px 5px rgba(60,40,20,0.14) !important;
+}
+
+/* Legal card extra glow on hover */
+.card-legal.card-lift:hover {
+  transform: translateY(-7px);
 }
