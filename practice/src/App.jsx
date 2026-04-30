@@ -89,7 +89,7 @@ export default function App() {
     setPhase('EVALUATING')
     setError(null)
     try {
-      const data = await call('/evaluate', 'POST', { seat: 2, n_samples: 200 })
+      const data = await call('/evaluate', 'POST', { seat: 2, n_samples: 80 })
       setAdvice(data)
       setPhase('RESULT')
     } catch (e) {
@@ -221,7 +221,7 @@ export default function App() {
                 <div style={{ textAlign: 'center', color: T.textMuted, fontStyle: 'italic', padding: '24px 0' }}>
                   <Spinner />
                   <div style={{ marginTop: '12px', fontSize: '0.82rem' }}>
-                    You bid <strong style={{ color: T.text }}>{formatBid(myBid)}</strong> — simulating ~800 deals…
+                    You bid <strong style={{ color: T.text }}>{formatBid(myBid)}</strong> — simulating deals…
                   </div>
                 </div>
               )}
