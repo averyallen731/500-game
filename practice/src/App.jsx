@@ -120,9 +120,18 @@ export default function App() {
     const myEV   = computeEV(advice, myBid)
     const optEV  = advice.optimal_ev
     const diff   = myEV - optEV
+    const evGap  = optEV - myEV   // always ≥ 0; how many EV pts the user gave up
+
+    // Classify mistake: passed, overbid, or underbid (relative to optimal contract size)
+    const myPts  = bidPoints(myBid)
+    const optPts = bidPoints(optimal)
+    let kind = 'wrong-trump'
+    if (myBid === 'PASS')          kind = 'passed'
+    else if (myPts > optPts)       kind = 'overbid'
+    else if (myPts < optPts)       kind = 'underbid'
 
     const matched = myBid === optimal
-    return { matched, myDisplay, optDisplay, myEV, optEV, diff }
+    return { matched, myDisplay, optDisplay, myEV, optEV, diff, evGap, kind }
   }
 
   const res = resultLabel()
@@ -286,7 +295,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {Math.abs(res.diff) > 1 && (
+                  {res.evGap > 1 && (
                     <div style={{
                       marginTop: '12px',
                       paddingTop: '12px',
@@ -295,9 +304,19 @@ export default function App() {
                       color: T.textMuted,
                       fontStyle: 'italic',
                     }}>
-                      {res.diff > 0
-                        ? `Your bid was ${res.diff.toFixed(0)} pts above optimal — slightly overbid`
-                        : `You left ${Math.abs(res.diff).toFixed(0)} pts of EV on the table`}
+                      {(() => {
+                        const gap = res.evGap.toFixed(0)
+                        switch (res.kind) {
+                          case 'passed':
+                            return `You passed up ${gap} pts of EV — this hand had a profitable bid`
+                          case 'overbid':
+                            return `Overbid by ${gap} pts of EV — too aggressive, you'd go set too often`
+                          case 'underbid':
+                            return `Underbid by ${gap} pts of EV — a higher bid would pay off more`
+                          default:
+                            return `Wrong trump cost ${gap} pts of EV`
+                        }
+                      })()}
                     </div>
                   )}
                 </>
@@ -356,6 +375,19 @@ const BASE_PTS = {
   9:  { S: 340, C: 360, D: 380, H: 400, NT: 420 },
   10: { S: 440, C: 460, D: 480, H: 500, NT: 520 },
   11: { S: 540, C: 560, D: 580, H: 600, NT: 620 },
+}
+
+function bidPoints(bidStr) {
+  if (!bidStr || bidStr === 'PASS') return 0
+  if (bidStr === 'NULLO') return 250
+  if (bidStr === 'DOUBLE_NULLO') return 500
+  for (const suf of ['NT', 'H', 'D', 'C', 'S']) {
+    if (bidStr.endsWith(suf)) {
+      const lvl = parseInt(bidStr.slice(0, -suf.length))
+      return BASE_PTS[lvl]?.[suf] ?? 0
+    }
+  }
+  return 0
 }
 
 function pctMaking(hist, target) {
