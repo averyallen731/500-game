@@ -12,8 +12,10 @@ import BidGrid from './components/BidGrid'
 import EVTable from './components/EVTable'
 import { T } from './theme'
 
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+
 async function call(path, method = 'GET', body = null) {
-  const res = await fetch('/api' + path, {
+  const res = await fetch(API_BASE + '/api' + path, {
     method,
     headers: body ? { 'Content-Type': 'application/json' } : {},
     body: body ? JSON.stringify(body) : undefined,
