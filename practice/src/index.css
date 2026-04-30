@@ -1,0 +1,28 @@
+:root {
+  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #3D2B1F;
+  background: #EDE7DC;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #EDE7DC; }
+#root { min-height: 100vh; }
+
+.card-hover {
+  transition: transform 0.13s ease, box-shadow 0.13s ease;
+  cursor: default;
+}
+
+.btn-deal {
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn-deal:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(146,64,14,0.35) !important;
+}
+.btn-deal:active:not(:disabled) {
+  transform: translateY(0);
+}
